@@ -1,0 +1,6 @@
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+
+[mcp_servers.postgres]
+command = "docker"
+args = ["run", "--rm", "-i", "node:25.6.0-slim", "npx", "--yes", "--package=@modelcontextprotocol/server-postgres@0.6.2", "--", "mcp-server-postgres", "postgresql://streamtube:streamtube@host.docker.internal:5432/streamtube"]

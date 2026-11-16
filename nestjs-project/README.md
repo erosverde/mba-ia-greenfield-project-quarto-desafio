@@ -96,3 +96,38 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## StreamTube Fase 03
+
+Com o Docker Desktop ativo e `.env` criado a partir de `.env.example`, suba a infraestrutura, instale as dependências, aplique as migrations e inicie o worker. Execute os comandos a partir de `nestjs-project/`.
+
+```sh
+docker compose up -d --build db mailpit minio redis nestjs-api
+docker compose exec -T nestjs-api npm ci
+docker compose exec -T nestjs-api npm run migration:run
+docker compose up -d --build video-worker
+docker compose exec nestjs-api npm run start:dev
+```
+
+O dono do canal inicia um rascunho com `POST /videos/uploads`, enviando `title` e `sizeBytes`. Peça uma URL para cada número de parte com `POST /videos/:id/uploads/parts/:partNumber` e envie a parte por PUT direto para a URL recebida. Use exatamente o `contentLength` informado. `POST /videos/:id/uploads/complete` confirma o multipart e registra o job. Consulte `GET /videos/:id` com JWT para acompanhar o processamento. Quando o vídeo estiver READY, use os caminhos públicos de reprodução, thumbnail e download devolvidos pela API. Para testar um intervalo, siga o 307 com o cabeçalho `Range: bytes=0-1023`. Ative `SWAGGER_ENABLED=true` para consultar o contrato em `/api/docs`.
+
+### Verificação
+
+Crie um banco exclusivo para os testes. As suítes de migrações recriam tabelas nesse banco. Mantenha o worker do Compose apontado para o banco de desenvolvimento.
+
+```sh
+docker compose exec -T db createdb -U streamtube streamtube_test
+docker compose exec -T -e DB_NAME=streamtube_test -e DB_DATABASE=streamtube_test nestjs-api sh -ec '
+  npm run migration:run
+  npm test -- --runInBand
+  npm run test:e2e -- --runInBand
+  npx tsc --noEmit
+  npm run lint
+'
+```
+
+O smoke test transmite um MP4 sintético de 64 MiB + 3 bytes e verifica upload, outbox, worker, estado READY e mídia. Para o aceite de volume, execute o script sem `--smoke` em um ambiente com espaço físico para gravar 10 GB no storage, mais a folga do Docker. O script transmite 150 partes reais, confirma o objeto, verifica o tamanho e lê o último intervalo. Use um banco de teste sem um worker externo apontado para ele.
+
+```sh
+docker compose exec -T -e DB_NAME=streamtube_test nestjs-api node --require ts-node/register test/video-limit.acceptance.ts --smoke
+```
