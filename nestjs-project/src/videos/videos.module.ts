@@ -1,12 +1,23 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ChannelsModule } from '../channels/channels.module';
+import videoStorageConfig from '../config/video-storage.config';
 import { VideoProcessingOutbox } from './entities/video-processing-outbox.entity';
 import { Video } from './entities/video.entity';
+import { VideoStorageService } from './video-storage.service';
+import { VideoUploadsService } from './video-uploads.service';
+import { VideosController } from './videos.controller';
 import { VideosRepository } from './videos.repository';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Video, VideoProcessingOutbox])],
-  providers: [VideosRepository],
-  exports: [VideosRepository],
+  imports: [
+    ChannelsModule,
+    ConfigModule.forFeature(videoStorageConfig),
+    TypeOrmModule.forFeature([Video, VideoProcessingOutbox]),
+  ],
+  controllers: [VideosController],
+  providers: [VideosRepository, VideoStorageService, VideoUploadsService],
+  exports: [VideosRepository, VideoStorageService],
 })
 export class VideosModule {}
