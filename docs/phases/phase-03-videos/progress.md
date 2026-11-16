@@ -48,3 +48,9 @@ As três URLs estáveis retornam 307 para GET pré-assinado no MinIO. As rotas d
 - A URL de reprodução respondeu 206 após o redirecionamento. O `Content-Range` foi `bytes 16-47/1001508` e os 32 bytes coincidiram com o intervalo do MP4 de playback no storage. A URL de download serviu o original como attachment. A comparação por streaming confirmou igualdade dos 197.132.288 bytes.
 - A primeira tentativa atingiu o limite da rota de status com consultas a cada 300 ms. A repetição passou com consultas a cada 6,5 s, usando a configuração existente da API.
 - O teste de transferência integral de 10 GB segue pendente.
+
+### Nova tentativa de aceite de 10 GB
+
+A execução começou com 12.162.838.528 bytes livres no disco físico do Windows. O teste usou MinIO e banco descartáveis, com o worker parado. O último marco confirmado foi de 125 das 150 partes, somando 8.388.608.000 bytes aceitos pelo MinIO. A proteção encerrou o runner com código 137 quando o disco chegou a 992.468.992 bytes livres. A execução terminou antes de confirmar o objeto final e verificar seu tamanho.
+
+O volume descartável, o banco de teste e os containers foram removidos. Os volumes do projeto foram preservados e a stack voltou a ficar parada. O aceite integral de 10 GB permanece pendente.
