@@ -40,3 +40,11 @@ As três URLs estáveis retornam 307 para GET pré-assinado no MinIO. As rotas d
 - O smoke de aceite transmitiu 67.108.867 bytes em 2 partes ao MinIO, rejeitou 10.000.000.001 bytes na API e levou o MP4 até READY. Verificou leitura por Range e JPEG a partir das URLs estáveis.
 - O teste de transferência de 10.000.000.000 bytes permanece pendente. A revisão automática rejeitou iniciar a transmissão porque o disco físico do Windows tinha aproximadamente 5,6 GB livres. O script está em `nestjs-project/test/video-limit.acceptance.ts`. A execução de volume requer espaço físico suficiente no ambiente que hospeda o Docker.
 - Os commits da branch registram cada SI pelo ID. O aceite de volume continua como condição para fechar o SI-03.5 e a fase.
+
+### Smoke adicional de 188 MiB
+
+- Cadastro via API, recebimento do e-mail no Mailpit, confirmação pelo token da mensagem e login com JWT.
+- Um MP4 H.264 sintético, de 3 s e 1280 × 720, foi enviado diretamente ao MinIO em três partes. Foram transmitidos 197.132.288 bytes. O serviço `video-worker` do Compose concluiu o job BullMQ e o vídeo chegou a READY com thumbnail JPEG.
+- A URL de reprodução respondeu 206 após o redirecionamento. O `Content-Range` foi `bytes 16-47/1001508` e os 32 bytes coincidiram com o intervalo do MP4 de playback no storage. A URL de download serviu o original como attachment. A comparação por streaming confirmou igualdade dos 197.132.288 bytes.
+- A primeira tentativa atingiu o limite da rota de status com consultas a cada 300 ms. A repetição passou com consultas a cada 6,5 s, usando a configuração existente da API.
+- O teste de transferência integral de 10 GB segue pendente.
