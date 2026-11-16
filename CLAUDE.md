@@ -18,12 +18,12 @@ This is a monorepo with two main areas:
 
 See `docs/diagrams/software-arch.mermaid` for the full diagram. Key containers:
 
-- **Frontend** (Next.js) → calls API via REST, streams from Object Storage
-- **API** (Nest.js) → business rules, auth, reads/writes DB, uploads to storage, publishes jobs to queue, sends emails
-- **Video Worker** (FFmpeg) → consumes jobs from queue, processes videos, updates DB and storage
+- **Frontend** (Next.js) → calls API via REST, streams from Object Storage when given a signed media URL
+- **API** (Nest.js) → business rules, auth, reads/writes DB, issues multipart upload URLs, commits video jobs to the outbox, sends emails
+- **Video Worker** (FFmpeg) → dispatches outbox jobs and consumes them, generates MP4 playback and JPEG thumbnails, updates DB and storage
 - **Database** (PostgreSQL) → users, channels, videos, comments, likes
 - **Object Storage** (S3/MinIO) → video files and thumbnails
-- **Message Queue** (TBD) → video processing job queue
+- **Message Queue** (BullMQ + Redis) → video processing job queue
 - **Email Service** (SMTP) → account confirmation and password recovery
 
 ## Docker Networking

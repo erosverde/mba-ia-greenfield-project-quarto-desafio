@@ -9,11 +9,15 @@ const MAX_RETRIES = 5;
 
 function isPgUniqueViolationOnColumn(err: unknown, column: string): boolean {
   if (!(err instanceof QueryFailedError)) return false;
-  const e = err as any;
+  const failure: unknown = err.driverError;
   return (
-    e.code === PG_UNIQUE_VIOLATION &&
-    typeof e.detail === 'string' &&
-    e.detail.includes(column)
+    typeof failure === 'object' &&
+    failure !== null &&
+    'code' in failure &&
+    failure.code === PG_UNIQUE_VIOLATION &&
+    'detail' in failure &&
+    typeof failure.detail === 'string' &&
+    failure.detail.includes(column)
   );
 }
 
