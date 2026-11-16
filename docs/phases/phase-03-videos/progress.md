@@ -1,7 +1,7 @@
 ---
 kind: phase
 name: phase-03-videos
-status: in_progress
+status: completed
 ---
 
 # phase-03-videos — Progress
@@ -12,7 +12,7 @@ status: in_progress
 | SI-03.2 | Serviços e upload multipart | completed | MinIO e Redis saudáveis no Compose. 4 e2e de upload, 148 testes da suíte, 56 e2e no total, tsc e lint do módulo passaram. |
 | SI-03.3 | Fila durável e worker de mídia | completed | 4 testes focados de integração, 152 testes da suíte, 56 e2e, tsc, lint do SI e smoke test no serviço do Compose passaram. |
 | SI-03.4 | Reprodução e download | completed | 4 e2e focados, 152 testes da suíte, 60 e2e no total, TypeScript e lint do SI passaram. |
-| SI-03.5 | Aceite e documentação | in_progress | 152 testes unitários/integração, 60 e2e, tsc, lint global, build e smoke de ponta a ponta passaram. Aceite de 10 GB bloqueado pelo espaço físico. |
+| SI-03.5 | Aceite e documentação | completed | 152 testes unitários/integração, 60 e2e, tsc, lint global, build, smoke de 188 MiB e transferência de 10 GB passaram. |
 
 ## Verificação da base
 
@@ -38,8 +38,8 @@ As três URLs estáveis retornam 307 para GET pré-assinado no MinIO. As rotas d
 - `npm run test:e2e -- --runInBand` passou com 60 testes em 5 suítes.
 - `npx tsc --noEmit`, `npm run lint` e `npm run build` passaram. As correções mantêm as regras do ESLint.
 - O smoke de aceite transmitiu 67.108.867 bytes em 2 partes ao MinIO, rejeitou 10.000.000.001 bytes na API e levou o MP4 até READY. Verificou leitura por Range e JPEG a partir das URLs estáveis.
-- O teste de transferência de 10.000.000.000 bytes permanece pendente. A revisão automática rejeitou iniciar a transmissão porque o disco físico do Windows tinha aproximadamente 5,6 GB livres. O script está em `nestjs-project/test/video-limit.acceptance.ts`. A execução de volume requer espaço físico suficiente no ambiente que hospeda o Docker.
-- Os commits da branch registram cada SI pelo ID. O aceite de volume continua como condição para fechar o SI-03.5 e a fase.
+- A revisão automática rejeitou a primeira preparação do teste de 10.000.000.000 bytes quando o Windows tinha aproximadamente 5,6 GB livres. O script está em `nestjs-project/test/video-limit.acceptance.ts`. A execução de volume requer espaço físico suficiente no ambiente que hospeda o Docker.
+- Os commits da branch registram cada SI pelo ID. O resultado do teste de volume está registrado no aceite final abaixo.
 
 ### Smoke adicional de 188 MiB
 
@@ -47,10 +47,17 @@ As três URLs estáveis retornam 307 para GET pré-assinado no MinIO. As rotas d
 - Um MP4 H.264 sintético, de 3 s e 1280 × 720, foi enviado diretamente ao MinIO em três partes. Foram transmitidos 197.132.288 bytes. O serviço `video-worker` do Compose concluiu o job BullMQ e o vídeo chegou a READY com thumbnail JPEG.
 - A URL de reprodução respondeu 206 após o redirecionamento. O `Content-Range` foi `bytes 16-47/1001508` e os 32 bytes coincidiram com o intervalo do MP4 de playback no storage. A URL de download serviu o original como attachment. A comparação por streaming confirmou igualdade dos 197.132.288 bytes.
 - A primeira tentativa atingiu o limite da rota de status com consultas a cada 300 ms. A repetição passou com consultas a cada 6,5 s, usando a configuração existente da API.
-- O teste de transferência integral de 10 GB segue pendente.
+- O teste separado de volume está registrado no aceite final abaixo.
 
 ### Nova tentativa de aceite de 10 GB
 
 A execução começou com 12.162.838.528 bytes livres no disco físico do Windows. O teste usou MinIO e banco descartáveis, com o worker parado. O último marco confirmado foi de 125 das 150 partes, somando 8.388.608.000 bytes aceitos pelo MinIO. A proteção encerrou o runner com código 137 quando o disco chegou a 992.468.992 bytes livres. A execução terminou antes de confirmar o objeto final e verificar seu tamanho.
 
-O volume descartável, o banco de teste e os containers foram removidos. Os volumes do projeto foram preservados e a stack voltou a ficar parada. O aceite integral de 10 GB permanece pendente.
+O volume descartável, o banco de teste e os containers foram removidos. Os volumes do projeto foram preservados e a stack voltou a ficar parada. O aceite integral ficou pendente naquela tentativa.
+
+### Aceite final de 10 GB
+
+- Envio real de um MP4 sintético de 10.000.000.000 bytes em 150 partes assinadas. As partes foram enviadas diretamente ao MinIO, com PostgreSQL e storage descartáveis e worker desligado.
+- O script `nestjs-project/test/video-limit.acceptance.ts`, executado no modo integral, rejeitou 10.000.000.001 bytes e confirmou 10.000.000.000 bytes transmitidos e persistidos conforme `HeadObject`. Conferiu os 64 bytes finais via Range e a transição para PROCESSING com uma intenção na outbox.
+- O teste saiu com código 0. O smoke anterior de 188 MiB cobriu o processamento pelo worker do Compose, thumbnail, Range e integridade do download.
+- A execução começou com 14.916.481.024 bytes físicos livres. O monitor deixou o limite mínimo de 1 GB ativo durante o teste. Os containers, o banco e o volume descartáveis foram removidos após a verificação.
