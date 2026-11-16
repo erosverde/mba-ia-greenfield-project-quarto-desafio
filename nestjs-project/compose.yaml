@@ -68,6 +68,26 @@ services:
       timeout: 3s
       retries: 10
 
+  video-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.video-worker
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DB_HOST: db
+      VIDEO_STORAGE_ENDPOINT: http://minio:9000
+      VIDEO_REDIS_HOST: redis
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stop_grace_period: 30s
+
 volumes:
   video-storage:
   video-queue:

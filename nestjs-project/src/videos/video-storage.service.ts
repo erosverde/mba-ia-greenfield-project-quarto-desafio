@@ -1,20 +1,27 @@
+import { createReadStream, createWriteStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import {
   AbortMultipartUploadCommand,
   BucketLocationConstraint,
   CompleteMultipartUploadCommand,
   CreateBucketCommand,
   CreateMultipartUploadCommand,
+  GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
   ListPartsCommand,
+  PutObjectCommand,
   S3Client,
   S3ServiceException,
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import videoStorageConfig from '../config/video-storage.config';
+import { VIDEO_PART_BYTES } from './video-upload.constants';
 import {
   VideoStorageUnavailableException,
   VideoUploadIncompleteException,
@@ -27,7 +34,7 @@ export interface UploadedPart {
 }
 
 @Injectable()
-export class VideoStorageService implements OnModuleDestroy {
+export class VideoStorageService implements OnApplicationShutdown {
   private readonly internalClient: S3Client;
   private readonly signingClient: S3Client;
   private bucketReady?: Promise<void>;
@@ -55,7 +62,7 @@ export class VideoStorageService implements OnModuleDestroy {
     });
   }
 
-  onModuleDestroy(): void {
+  onApplicationShutdown(): void {
     this.internalClient.destroy();
     this.signingClient.destroy();
   }
@@ -241,6 +248,78 @@ export class VideoStorageService implements OnModuleDestroy {
       )
         return null;
       throw new VideoStorageUnavailableException(error);
+    }
+  }
+
+  async downloadToFile(key: string, path: string): Promise<void> {
+    const { Body } = await this.internalClient.send(
+      new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
+    );
+    if (!(Body instanceof Readable))
+      throw new Error('S3 response body is missing');
+    await pipeline(Body, createWriteStream(path, { flags: 'wx' }));
+  }
+
+  async uploadFile(
+    key: string,
+    path: string,
+    contentType: string,
+    videoId: string,
+  ): Promise<void> {
+    const { size } = await stat(path);
+    const Bucket = this.config.bucket;
+    if (size <= 5_000_000_000) {
+      const body = createReadStream(path);
+      try {
+        await this.internalClient.send(
+          new PutObjectCommand({
+            Bucket,
+            Key: key,
+            Body: body,
+            ContentType: contentType,
+            ContentLength: size,
+            Metadata: { 'video-id': videoId },
+          }),
+        );
+      } finally {
+        body.destroy();
+      }
+      return;
+    }
+
+    const uploadId = await this.begin(key, videoId);
+    const parts: UploadedPart[] = [];
+    const chunkSize = VIDEO_PART_BYTES;
+    try {
+      for (let offset = 0; offset < size; offset += chunkSize) {
+        const length = Math.min(chunkSize, size - offset);
+        const partNumber = parts.length + 1;
+        const body = createReadStream(path, {
+          start: offset,
+          end: offset + length - 1,
+        });
+        try {
+          const result = await this.internalClient.send(
+            new UploadPartCommand({
+              Bucket,
+              Key: key,
+              UploadId: uploadId,
+              PartNumber: partNumber,
+              Body: body,
+              ContentLength: length,
+            }),
+          );
+          if (!result.ETag) throw new Error('S3 did not return the part ETag');
+          parts.push({ partNumber, size: length, etag: result.ETag });
+        } finally {
+          body.destroy();
+        }
+      }
+      await this.complete(key, uploadId, parts);
+    } catch (error) {
+      // Unfinished multipart uploads are also collected by the storage lifecycle.
+      await this.abort(key, uploadId).catch(() => undefined);
+      throw error;
     }
   }
 

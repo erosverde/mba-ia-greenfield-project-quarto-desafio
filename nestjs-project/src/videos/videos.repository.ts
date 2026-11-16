@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, EntityManager, LessThanOrEqual } from 'typeorm';
 import { VideoProcessingOutbox } from './entities/video-processing-outbox.entity';
 import { Video, VideoStatus } from './entities/video.entity';
+import type { VideoMetadata } from './entities/video.entity';
 
 @Injectable()
 export class VideosRepository {
@@ -56,6 +57,28 @@ export class VideosRepository {
       });
       return action(video, manager);
     });
+  }
+
+  async markReady(
+    id: string,
+    result: {
+      durationMs: number;
+      metadata: VideoMetadata;
+      playbackKey: string;
+      thumbnailKey: string;
+    },
+  ): Promise<void> {
+    await this.dataSource.getRepository(Video).update(
+      { id, status: VideoStatus.Processing },
+      {
+        status: VideoStatus.Ready,
+        duration_ms: String(result.durationMs),
+        metadata: result.metadata,
+        playback_key: result.playbackKey,
+        thumbnail_key: result.thumbnailKey,
+        error_code: null,
+      },
+    );
   }
 
   async markProcessing(video: Video, manager: EntityManager): Promise<Video> {

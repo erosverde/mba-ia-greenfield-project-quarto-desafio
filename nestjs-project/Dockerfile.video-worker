@@ -1,0 +1,21 @@
+FROM node:25.6.0-trixie-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY tsconfig.json tsconfig.build.json ./
+COPY src ./src
+RUN ./node_modules/.bin/tsc -p tsconfig.build.json
+
+FROM node:25.6.0-trixie-slim AS runtime-deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
+
+FROM node:25.6.0-trixie-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg=7:7.1.5-0+deb13u1 \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=runtime-deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+USER node
+CMD ["node", "dist/video-worker.js"]
