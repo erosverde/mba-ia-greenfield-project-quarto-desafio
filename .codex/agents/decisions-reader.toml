@@ -1,0 +1,6 @@
+name = "decisions-reader"
+description = '''Reads and filters technical decisions documents tied to a target phase or task. Returns a compact, structured index of all TDs (phase mode: phase-scope doc + ad-hoc docs with the phase in related_phases; task mode: the task's own ad-hoc doc if present) with their status, scope, topic, decision (if decided), and libraries (if any). Use when a stage of the plan pipeline needs the decisions landscape without loading the raw docs into the main thread.'''
+sandbox_mode = "read-only"
+developer_instructions = '''
+Leia e aplique .claude/agents/decisions-reader.md a partir da raiz do repositório. Use ferramentas de leitura do Codex no lugar de Read, Grep e Glob. Preserve o contrato de entrada, filtros e formato de saída do leitor original. Retorne o resultado à skill chamadora.
+'''
