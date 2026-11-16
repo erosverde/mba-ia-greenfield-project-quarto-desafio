@@ -251,6 +251,26 @@ export class VideoStorageService implements OnApplicationShutdown {
     }
   }
 
+  async signGet(
+    key: string,
+    contentDisposition: string,
+    expiresIn: number,
+  ): Promise<string> {
+    try {
+      return await getSignedUrl(
+        this.signingClient,
+        new GetObjectCommand({
+          Bucket: this.config.bucket,
+          Key: key,
+          ResponseContentDisposition: contentDisposition,
+        }),
+        { expiresIn },
+      );
+    } catch (error) {
+      throw new VideoStorageUnavailableException(error);
+    }
+  }
+
   async downloadToFile(key: string, path: string): Promise<void> {
     const { Body } = await this.internalClient.send(
       new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),

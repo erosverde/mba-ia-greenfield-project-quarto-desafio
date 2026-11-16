@@ -194,9 +194,12 @@ export class VideoUploadsService implements OnModuleInit, OnModuleDestroy {
       durationMs: video.duration_ms === null ? null : Number(video.duration_ms),
       metadata: video.metadata,
       errorCode: video.error_code,
-      streamUrl: null,
-      thumbnailUrl: null,
-      downloadUrl: null,
+      streamUrl:
+        video.status === VideoStatus.Ready ? `/videos/${id}/stream` : null,
+      thumbnailUrl:
+        video.status === VideoStatus.Ready ? `/videos/${id}/thumbnail` : null,
+      downloadUrl:
+        video.status === VideoStatus.Ready ? `/videos/${id}/download` : null,
     };
   }
 

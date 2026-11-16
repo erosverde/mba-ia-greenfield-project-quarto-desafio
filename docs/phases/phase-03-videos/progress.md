@@ -11,7 +11,7 @@ status: in_progress
 | SI-03.1 | Persistência de vídeos | completed | Migration e rollback, 6 testes de integração focados, suíte completa (148 testes), e2e (52 testes), tsc e lint dos arquivos alterados passaram. |
 | SI-03.2 | Serviços e upload multipart | completed | MinIO e Redis saudáveis no Compose. 4 e2e de upload, 148 testes da suíte, 56 e2e no total, tsc e lint do módulo passaram. |
 | SI-03.3 | Fila durável e worker de mídia | completed | 4 testes focados de integração, 152 testes da suíte, 56 e2e, tsc, lint do SI e smoke test no serviço do Compose passaram. |
-| SI-03.4 | Reprodução e download | pending | A executar |
+| SI-03.4 | Reprodução e download | completed | 4 e2e focados, 152 testes da suíte, 60 e2e no total, TypeScript e lint do SI passaram. |
 | SI-03.5 | Aceite e documentação | pending | A executar |
 
 ## Verificação da base
@@ -27,3 +27,7 @@ MinIO compilado da release fixada e Redis respondeu PONG. Os e2e cobrem autoriza
 ## Verificação do SI-03.3
 
 O serviço `video-worker` rodou no Compose com BullMQ 5.66.4, Redis e FFmpeg 7.1.5. O dispatcher publica da outbox com o UUID estável e reconcilia jobs ausentes e falhas terminais. O worker salva JPEG, MP4 faststart e metadados, com até três tentativas para falhas transitórias. O teste de integração usa FFmpeg na imagem de desenvolvimento e serviços reais em banco de teste isolado. Um smoke test no container empacotado processou um MP4 H.264 sem áudio de 1 segundo até READY, com as duas chaves de artefato gravadas.
+
+## Verificação do SI-03.4
+
+As três URLs estáveis retornam 307 para GET pré-assinado no MinIO. As rotas de mídia estão disponíveis publicamente em READY. O teste seguiu o 307 com Range, recebeu 206 e comparou Content-Range e os bytes do MP4 de playback. Também verificou 416, 404 antes de READY, JPEG inline, download dos bytes do original como attachment e nova assinatura pela mesma rota. O OpenAPI foi regenerado e conferido.
